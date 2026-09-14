@@ -1,0 +1,35 @@
+name: Pipeline for updating business logic documentation
+
+on:
+  repository_dispatch:
+    types: [update-docs]
+
+jobs:
+  llm-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download files from repository ChatBot
+        uses: actions/checkout@v4
+
+      - name: Prepare Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Intall Python dependencies
+        run: pip install requests openai
+
+      - name: Run the agent to analyze the PR and update business logic documentation
+        env:
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python agent.py
+
+      - name: Commit & Push new changes to business logic
+        run: |
+          git config user.name "GitHub Action Bot"
+          git config user.email "action@github.com"
+          git add docs
+          git commit -m "Docs: Automate update from PR #${{ github.event.client_payload.pr_number }}" || exit 0
+          git push
